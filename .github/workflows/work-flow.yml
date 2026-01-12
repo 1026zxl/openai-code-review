@@ -28,5 +28,5 @@ jobs:
       - name: Run Java code
         run: |
           cd openai-code-review-sdk/src/main/java
-          javac org/ocr/com/OpenaiCodeReview.java
-          java org.ocr.com.OpenaiCodeReview
+          javac org/ocr/com/OpenAiCodeReview.java
+          java -cp . org.ocr.com.OpenAiCodeReview
