@@ -1,0 +1,2 @@
+Main-Class: org.ocr.com.OpenAiCodeReview
+Manifest-Version: 1.0
