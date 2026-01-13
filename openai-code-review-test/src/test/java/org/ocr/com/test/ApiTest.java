@@ -21,5 +21,7 @@ public class ApiTest {
     @Test
     public void test() {
         log.info("测试评审V2... ...");
+        log.info("测试评审V3... ...");
+        log.info("测试评审V4... ...");
     }
 }
