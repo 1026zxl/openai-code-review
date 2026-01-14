@@ -229,7 +229,8 @@ public class OpenAiCodeReview {
         }
         
         // 构建提示词
-        String prompt = String.format(CODE_REVIEW_PROMPT_TEMPLATE, codeContent);
+        // 注意：不使用 String.format，因为 codeContent 可能包含 % 字符，会导致格式化错误
+        String prompt = CODE_REVIEW_PROMPT_TEMPLATE.replace("%s", codeContent);
         
         // 构建请求体
         Map<String, Object> requestBody = Maps.newHashMap();
@@ -269,6 +270,7 @@ public class OpenAiCodeReview {
                     if (!choices.isEmpty()) {
                         JSONObject choice = choices.get(0);
                         JSONObject messageContent = choice.getJSONObject("message");
+                        System.out.println(messageContent.getString("content"));
                         return messageContent.getString("content");
                     }
                 }
