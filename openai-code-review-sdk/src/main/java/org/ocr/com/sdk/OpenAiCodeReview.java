@@ -35,8 +35,13 @@ public class OpenAiCodeReview {
      * @param args 命令行参数（当前未使用，保留用于未来扩展）
      */
     public static void main(String[] args) {
+        // 测试日志输出
+        System.out.println("=== 开始执行代码评审 ===");
+        System.out.println("日志系统检查: " + (logger != null ? "正常" : "异常"));
+        
         try {
             logger.info("=== OpenAI代码自动评审开始 ===");
+            logger.debug("调试信息：日志系统已初始化");
             
             // 使用 CodeReviewClient 执行评审
             CodeReviewClient client = CodeReviewClient.create();

@@ -28,12 +28,15 @@
             <artifactId>slf4j-api</artifactId>
             <version>${slf4j.version}</version>
         </dependency>
-        <!-- slf4j-simple：不打包，让使用者自己选择日志实现，避免冲突 -->
+        <!-- slf4j-simple：用于本地调试，IDE运行时可以看到日志 -->
+        <!-- 注意：此依赖不会被 shade 插件打包（未包含在 artifactSet includes 中），使用者需要自己提供日志实现 -->
         <dependency>
             <groupId>org.slf4j</groupId>
             <artifactId>slf4j-simple</artifactId>
             <version>${slf4j.version}</version>
-            <scope>provided</scope>
+            <!-- 使用 compile scope：IDE 运行时可见，方便本地调试 -->
+            <!-- shade 插件不会打包此依赖（因为未包含在 includes 中） -->
+            <scope>compile</scope>
         </dependency>
         <dependency>
             <groupId>junit</groupId>
@@ -140,8 +143,10 @@
                         <includes>
                             <include>org.slf4j:slf4j-api</include>
                             <!-- 注意：slf4j-simple 不打包，由使用者提供日志实现 -->
-                            <!-- Jackson: databind已包含core和annotations -->
+                            <!-- Jackson: 需要显式包含所有相关依赖 -->
+                            <include>com.fasterxml.jackson.core:jackson-core</include>
                             <include>com.fasterxml.jackson.core:jackson-databind</include>
+                            <include>com.fasterxml.jackson.core:jackson-annotations</include>
                             <include>org.eclipse.jgit:org.eclipse.jgit</include>
                             <include>org.apache.httpcomponents:httpclient</include>
                             <include>org.apache.httpcomponents:httpcore</include>
