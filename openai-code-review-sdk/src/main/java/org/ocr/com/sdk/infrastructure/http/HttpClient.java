@@ -102,13 +102,13 @@ public class HttpClient {
     private String parseResponse(String responseBody) {
         try {
             JsonNode jsonNode = objectMapper.readTree(responseBody);
-            
+            logger.info("响应内容: {}", jsonNode);
             if (!jsonNode.has("choices")) {
                 throw new ApiException(ErrorCode.AI_API_RESPONSE_INVALID, "响应中缺少 choices 字段");
             }
             
             JsonNode choices = jsonNode.get("choices");
-            if (!choices.isArray() || choices.size() == 0) {
+            if (!choices.isArray() || choices.isEmpty()) {
                 throw new ApiException(ErrorCode.AI_API_RESPONSE_EMPTY);
             }
             

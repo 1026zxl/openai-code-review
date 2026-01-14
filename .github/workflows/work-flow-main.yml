@@ -26,10 +26,7 @@ jobs:
       - name: Build with Maven
         run: mvn clean install
 
-      - name: Copy openai-code-review JAR
-        run: cp openai-code-review-sdk/target/openai-code-review-sdk-1.0-SNAPSHOT.jar target/
-
       - name: Run openai-code-review
-        run: java -jar target/openai-code-review-sdk-1.0-SNAPSHOT.jar
+        run: java -jar openai-code-review-sdk/target/openai-code-review-sdk-1.0-SNAPSHOT.jar
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
