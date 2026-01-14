@@ -27,7 +27,7 @@ jobs:
         run: mvn clean install
 
       - name: Copy openai-code-review JAR
-        run: mvn dependency:copy -Dartifact=org.ocr.com:openai-code-review-sdk:1.0-SNAPSHOT -DoutputDirectory=target
+        run: mvn dependency:copy -Dartifact=org.ocr.com.sdk:openai-code-review-sdk:1.0-SNAPSHOT -DoutputDirectory=target
 
       - name: Run openai-code-review
         run: java -jar target/openai-code-review-sdk-1.0-SNAPSHOT.jar

@@ -1,2 +1,2 @@
-Main-Class: org.ocr.com.OpenAiCodeReview
+Main-Class: org.ocr.com.sdk.OpenAiCodeReview
 Manifest-Version: 1.0
