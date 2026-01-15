@@ -24,9 +24,5 @@ public class OpenAiCodeReviewTest {
         // 这里可以添加单元测试逻辑
         // 由于主要功能依赖外部API和Git环境，这里主要做集成测试
         logger.info("OpenAI代码评审测试完成");
-
-        ReportStorage reportStorage = new ReportStorage(CodeReviewConfig.fromEnvironment());
-        reportStorage.saveReport(null, null);
-
     }
 }
