@@ -25,6 +25,16 @@ code.review.max.tokens=4000
 # 报告存储基础目录（可选，默认：代码评审记录）
 code.review.report.base.dir=代码评审记录
 
+# ========== GitHub 仓库配置 ==========
+# GitHub 仓库 URL（可选，默认：https://github.com/1026zxl/code-review-repository.git）
+code.review.github.repo.url=https://github.com/1026zxl/code-review-repository.git
+
+# GitHub Token（可选，也可通过环境变量 GITHUB_TOKEN 设置）
+# code.review.github.token=your_github_token_here
+
+# GitHub Token 环境变量名（可选，默认：GITHUB_TOKEN）
+code.review.github.token.env=GITHUB_TOKEN
+
 # ========== Git配置 ==========
 # Git仓库路径（可选，默认：当前目录）
 # code.review.git.repository.path=/path/to/git/repo

@@ -26,6 +26,8 @@ public class CodeReviewConfig {
     private static final double DEFAULT_TEMPERATURE = 0.7;
     private static final int DEFAULT_MAX_TOKENS = 4000;
     private static final String DEFAULT_REPORT_BASE_DIR = "代码评审记录";
+    private static final String DEFAULT_GITHUB_REPO_URL = "https://github.com/1026zxl/code-review-repository.git";
+    private static final String DEFAULT_GITHUB_TOKEN_ENV = "CODE_TOKEN";
     
     // 配置属性
     private String apiKey;
@@ -36,6 +38,9 @@ public class CodeReviewConfig {
     private int maxTokens = DEFAULT_MAX_TOKENS;
     private String reportBaseDir = DEFAULT_REPORT_BASE_DIR;
     private String gitRepositoryPath;
+    private String githubRepoUrl = DEFAULT_GITHUB_REPO_URL;
+    private String githubToken;
+    private String githubTokenEnv = DEFAULT_GITHUB_TOKEN_ENV;
     
     /**
      * 私有构造函数，使用Builder创建实例
@@ -71,6 +76,9 @@ public class CodeReviewConfig {
                 config.maxTokens = Integer.parseInt(props.getProperty("code.review.max.tokens", String.valueOf(DEFAULT_MAX_TOKENS)));
                 config.reportBaseDir = props.getProperty("code.review.report.base.dir", DEFAULT_REPORT_BASE_DIR);
                 config.gitRepositoryPath = props.getProperty("code.review.git.repository.path");
+                config.githubRepoUrl = props.getProperty("code.review.github.repo.url", DEFAULT_GITHUB_REPO_URL);
+                config.githubToken = props.getProperty("code.review.github.token");
+                config.githubTokenEnv = props.getProperty("code.review.github.token.env", DEFAULT_GITHUB_TOKEN_ENV);
             } else {
                 logger.debug("配置文件不存在: {}，使用默认配置", propertiesFile);
             }
@@ -130,6 +138,19 @@ public class CodeReviewConfig {
         if (envReportDir != null && !envReportDir.isEmpty()) {
             this.reportBaseDir = envReportDir;
         }
+        
+        String envGithubRepoUrl = System.getenv("CODE_REVIEW_GITHUB_REPO_URL");
+        if (envGithubRepoUrl != null && !envGithubRepoUrl.isEmpty()) {
+            this.githubRepoUrl = envGithubRepoUrl;
+        }
+        
+        if (githubToken == null || githubToken.isEmpty()) {
+            String envGithubToken = System.getenv(githubTokenEnv);
+            if (envGithubToken != null && !envGithubToken.isEmpty()) {
+                this.githubToken = envGithubToken;
+                logger.debug("从环境变量 {} 加载GitHub Token", githubTokenEnv);
+            }
+        }
     }
     
     /**
@@ -182,6 +203,18 @@ public class CodeReviewConfig {
         return gitRepositoryPath;
     }
     
+    public String getGithubRepoUrl() {
+        return githubRepoUrl;
+    }
+    
+    public String getGithubToken() {
+        return githubToken;
+    }
+    
+    public String getGithubTokenEnv() {
+        return githubTokenEnv;
+    }
+    
     /**
      * Builder模式
      */
@@ -225,6 +258,21 @@ public class CodeReviewConfig {
         
         public Builder gitRepositoryPath(String gitRepositoryPath) {
             config.gitRepositoryPath = gitRepositoryPath;
+            return this;
+        }
+        
+        public Builder githubRepoUrl(String githubRepoUrl) {
+            config.githubRepoUrl = githubRepoUrl;
+            return this;
+        }
+        
+        public Builder githubToken(String githubToken) {
+            config.githubToken = githubToken;
+            return this;
+        }
+        
+        public Builder githubTokenEnv(String githubTokenEnv) {
+            config.githubTokenEnv = githubTokenEnv;
             return this;
         }
         
