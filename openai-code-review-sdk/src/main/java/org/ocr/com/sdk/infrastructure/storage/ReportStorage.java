@@ -114,8 +114,6 @@ public class ReportStorage {
         } else {
             // 仓库不存在，执行克隆
             logger.info("克隆 GitHub 仓库: {}", repoUrl);
-            // 构建带 token 的 URL（用于克隆）
-            String urlWithToken = buildUrlWithToken(repoUrl, token);
             
             // 确保父目录存在
             Path parentPath = repoPath.getParent();
@@ -124,26 +122,13 @@ public class ReportStorage {
             }
             
             git = Git.cloneRepository()
-                    .setURI(urlWithToken)
+                    .setURI(repoUrl)  // 直接使用原始URL，通过credentialsProvider进行认证
                     .setDirectory(repoPath.toFile())
                     .setCredentialsProvider(credentialsProvider)
                     .call();
         }
         
         return git;
-    }
-    
-    /**
-     * 构建带 Token 的 URL
-     */
-    private String buildUrlWithToken(String repoUrl, String token) {
-        // 将 https://github.com/owner/repo.git 转换为 https://token@github.com/owner/repo.git
-        if (repoUrl.startsWith("https://")) {
-            return repoUrl.replace("https://", "https://" + token + "@");
-        } else if (repoUrl.startsWith("http://")) {
-            return repoUrl.replace("http://", "http://" + token + "@");
-        }
-        return repoUrl;
     }
     
     /**
@@ -222,8 +207,10 @@ public class ReportStorage {
         
         // 推送
         logger.info("推送评审报告到 GitHub...");
+        String githubToken = config.getGithubToken();
+        UsernamePasswordCredentialsProvider credentialsProvider = new UsernamePasswordCredentialsProvider(githubToken, "");
         git.push()
-                .setCredentialsProvider(new UsernamePasswordCredentialsProvider(config.getGithubToken(), ""))
+                .setCredentialsProvider(credentialsProvider)
                 .call();
         
         logger.info("评审报告已成功推送到 GitHub");
