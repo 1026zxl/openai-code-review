@@ -30,4 +30,4 @@ jobs:
         run: java -jar openai-code-review-sdk/target/openai-code-review-sdk-1.0-SNAPSHOT.jar
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-          GITHUB_TOKEN: ${{ secrets.CODE_TOKEN }}
+          CODE_TOKEN: ${{ secrets.CODE_TOKEN }}
