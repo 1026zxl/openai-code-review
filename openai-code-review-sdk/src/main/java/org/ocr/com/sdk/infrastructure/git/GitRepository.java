@@ -50,7 +50,7 @@ public class GitRepository {
             
             try (Git git = new Git(repository)) {
                 // 获取最近两次提交
-                Iterable<RevCommit> commits = git.log().setMaxCount(3).call();
+                Iterable<RevCommit> commits = git.log().setMaxCount(2).call();
                 List<RevCommit> commitList = new ArrayList<>();
                 for (RevCommit commit : commits) {
                     commitList.add(commit);

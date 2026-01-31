@@ -109,7 +109,10 @@ public class CodeReviewClient {
             // 2. 调用AI进行代码评审
             logger.info("Step 2: 调用AI进行代码评审...");
             String prompt = CodeReviewPromptTemplate.generatePrompt(codeInfo.getDiffContent());
+
+            System.out.println("开始调用AI 进行代码评审... ..." );
             String reviewContent = httpClient.callAiApi(prompt);
+            System.out.println("AI 代码评审结果: " + reviewContent);
             
             if (reviewContent == null || reviewContent.isEmpty()) {
                 throw new CodeReviewException(ErrorCode.AI_API_RESPONSE_EMPTY.getCode(),
@@ -118,6 +121,7 @@ public class CodeReviewClient {
             
             // 3. 保存评审报告
             logger.info("Step 3: 保存评审报告...");
+            System.out.println("保存评审报告... ...");
             String reportPath = reportStorage.saveReport(codeInfo, reviewContent);
             
             ReviewResult result = new ReviewResult(codeInfo, reviewContent, LocalDateTime.now(), reportPath);
@@ -125,7 +129,9 @@ public class CodeReviewClient {
             // 4. 发送通知消息（如果配置了）
             if (!notificationServices.isEmpty()) {
                 logger.info("Step 4: 发送通知消息...");
+                System.out.println("发送通知消息... ...");
                 NotificationMessage message = messageFactory.createFromReviewResult(result);
+                System.out.println("通知消息内容: " + message.getContent());
                 for (NotificationService service : notificationServices) {
                     if (service.isEnabled()) {
                         service.sendAsync(message);
