@@ -133,7 +133,9 @@ public class CodeReviewClient {
                 NotificationMessage message = messageFactory.createFromReviewResult(result);
                 System.out.println("通知消息内容: " + message.getContent());
                 for (NotificationService service : notificationServices) {
+                    System.out.println("进入for循环准备发送消息... ...");
                     if (service.isEnabled()) {
+                        System.out.println("进入if循环准备发送消息... ...");
                         service.sendAsync(message);
                     }
                 }
