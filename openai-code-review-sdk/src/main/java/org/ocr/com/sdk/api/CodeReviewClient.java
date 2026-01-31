@@ -131,7 +131,6 @@ public class CodeReviewClient {
                 logger.info("Step 4: 发送通知消息...");
                 System.out.println("发送通知消息... ...");
                 NotificationMessage message = messageFactory.createFromReviewResult(result);
-                System.out.println("通知消息内容: " + message.getContent());
                 for (NotificationService service : notificationServices) {
                     System.out.println("进入for循环准备发送消息... ...");
                     if (service.isEnabled()) {
