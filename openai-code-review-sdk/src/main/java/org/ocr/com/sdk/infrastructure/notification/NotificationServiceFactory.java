@@ -1,10 +1,13 @@
 package org.ocr.com.sdk.infrastructure.notification;
 
+import org.ocr.com.sdk.OpenAiCodeReview;
 import org.ocr.com.sdk.config.CodeReviewConfig;
 import org.ocr.com.sdk.domain.service.NotificationService;
+import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.logging.Logger;
 
 /**
  * 通知服务工厂
@@ -14,7 +17,6 @@ import java.util.List;
  * @since 1.0
  */
 public class NotificationServiceFactory {
-    
     /**
      * 创建通知服务列表
      * 根据配置创建所有可用的通知服务
