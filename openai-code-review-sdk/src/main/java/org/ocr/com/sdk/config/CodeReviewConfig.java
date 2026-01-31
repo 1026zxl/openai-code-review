@@ -28,6 +28,8 @@ public class CodeReviewConfig {
     private static final String DEFAULT_REPORT_BASE_DIR = "代码评审记录";
     private static final String DEFAULT_GITHUB_REPO_URL = "https://github.com/1026zxl/code-review-repository.git";
     private static final String DEFAULT_GITHUB_TOKEN_ENV = "CODE_TOKEN";
+    private static final String DEFAULT_WECHAT_APP_ID_ENV = "WECHAT_APP_ID";
+    private static final String DEFAULT_WECHAT_APP_SECRET_ENV = "WECHAT_APP_SECRET";
     
     // 配置属性
     private String apiKey;
@@ -41,6 +43,15 @@ public class CodeReviewConfig {
     private String githubRepoUrl = DEFAULT_GITHUB_REPO_URL;
     private String githubToken;
     private String githubTokenEnv = DEFAULT_GITHUB_TOKEN_ENV;
+    
+    // 微信公众号配置
+    private String wechatAppId;
+    private String wechatAppSecret;
+    private String wechatTemplateId;
+    private String wechatOpenId;
+    private String wechatAppIdEnv = DEFAULT_WECHAT_APP_ID_ENV;
+    private String wechatAppSecretEnv = DEFAULT_WECHAT_APP_SECRET_ENV;
+    private boolean wechatEnabled = false;
     
     /**
      * 私有构造函数，使用Builder创建实例
@@ -79,6 +90,16 @@ public class CodeReviewConfig {
                 config.githubRepoUrl = props.getProperty("code.review.github.repo.url", DEFAULT_GITHUB_REPO_URL);
                 config.githubToken = props.getProperty("code.review.github.token");
                 config.githubTokenEnv = props.getProperty("code.review.github.token.env", DEFAULT_GITHUB_TOKEN_ENV);
+                
+                // 微信公众号配置
+                config.wechatAppId = props.getProperty("code.review.wechat.app.id");
+                config.wechatAppSecret = props.getProperty("code.review.wechat.app.secret");
+                config.wechatTemplateId = props.getProperty("code.review.wechat.template.id");
+                config.wechatOpenId = props.getProperty("code.review.wechat.open.id");
+                config.wechatAppIdEnv = props.getProperty("code.review.wechat.app.id.env", DEFAULT_WECHAT_APP_ID_ENV);
+                config.wechatAppSecretEnv = props.getProperty("code.review.wechat.app.secret.env", DEFAULT_WECHAT_APP_SECRET_ENV);
+                String wechatEnabledStr = props.getProperty("code.review.wechat.enabled", "false");
+                config.wechatEnabled = Boolean.parseBoolean(wechatEnabledStr);
             } else {
                 logger.debug("配置文件不存在: {}，使用默认配置", propertiesFile);
             }
@@ -151,6 +172,40 @@ public class CodeReviewConfig {
                 logger.debug("从环境变量 {} 加载GitHub Token", githubTokenEnv);
             }
         }
+        
+        // 微信公众号配置
+        if (wechatAppId == null || wechatAppId.isEmpty()) {
+            String envWechatAppId = System.getenv(wechatAppIdEnv);
+            if (envWechatAppId != null && !envWechatAppId.isEmpty()) {
+                this.wechatAppId = envWechatAppId;
+                logger.debug("从环境变量 {} 加载微信公众号 AppID", wechatAppIdEnv);
+            }
+        }
+        
+        if (wechatAppSecret == null || wechatAppSecret.isEmpty()) {
+            String envWechatAppSecret = System.getenv(wechatAppSecretEnv);
+            if (envWechatAppSecret != null && !envWechatAppSecret.isEmpty()) {
+                this.wechatAppSecret = envWechatAppSecret;
+                logger.debug("从环境变量 {} 加载微信公众号 AppSecret", wechatAppSecretEnv);
+            }
+        }
+        
+        String envWechatTemplateId = System.getenv("WECHAT_TEMPLATE_ID");
+        if (envWechatTemplateId != null && !envWechatTemplateId.isEmpty()) {
+            this.wechatTemplateId = envWechatTemplateId;
+        }
+        
+        String envWechatOpenId = System.getenv("WECHAT_OPEN_ID");
+        if (envWechatOpenId != null && !envWechatOpenId.isEmpty()) {
+            this.wechatOpenId = envWechatOpenId;
+        }
+        
+        // 如果配置了必要的微信公众号参数，则启用
+        if (wechatAppId != null && wechatAppSecret != null && 
+            wechatTemplateId != null && wechatOpenId != null) {
+            this.wechatEnabled = true;
+            logger.debug("微信公众号推送已启用");
+        }
     }
     
     /**
@@ -215,6 +270,26 @@ public class CodeReviewConfig {
         return githubTokenEnv;
     }
     
+    public String getWechatAppId() {
+        return wechatAppId;
+    }
+    
+    public String getWechatAppSecret() {
+        return wechatAppSecret;
+    }
+    
+    public String getWechatTemplateId() {
+        return wechatTemplateId;
+    }
+    
+    public String getWechatOpenId() {
+        return wechatOpenId;
+    }
+    
+    public boolean isWechatEnabled() {
+        return wechatEnabled;
+    }
+    
     /**
      * Builder模式
      */
@@ -273,6 +348,31 @@ public class CodeReviewConfig {
         
         public Builder githubTokenEnv(String githubTokenEnv) {
             config.githubTokenEnv = githubTokenEnv;
+            return this;
+        }
+        
+        public Builder wechatAppId(String wechatAppId) {
+            config.wechatAppId = wechatAppId;
+            return this;
+        }
+        
+        public Builder wechatAppSecret(String wechatAppSecret) {
+            config.wechatAppSecret = wechatAppSecret;
+            return this;
+        }
+        
+        public Builder wechatTemplateId(String wechatTemplateId) {
+            config.wechatTemplateId = wechatTemplateId;
+            return this;
+        }
+        
+        public Builder wechatOpenId(String wechatOpenId) {
+            config.wechatOpenId = wechatOpenId;
+            return this;
+        }
+        
+        public Builder wechatEnabled(boolean wechatEnabled) {
+            config.wechatEnabled = wechatEnabled;
             return this;
         }
         

@@ -37,6 +37,12 @@ public enum ErrorCode {
     FILE_CREATE_FAILED("5002", "文件创建失败"),
     FILE_PATH_INVALID("5003", "文件路径无效"),
     
+    // 微信公众号相关错误 (6000-6999)
+    WECHAT_ACCESS_TOKEN_FAILED("6001", "获取微信公众号 access_token 失败"),
+    WECHAT_SEND_MESSAGE_FAILED("6002", "发送微信公众号消息失败"),
+    WECHAT_CONFIG_INVALID("6003", "微信公众号配置无效"),
+    WECHAT_TEMPLATE_INVALID("6004", "微信公众号模板消息格式无效"),
+    
     // 通用错误 (9000-9999)
     UNKNOWN_ERROR("9001", "未知错误"),
     PARAMETER_INVALID("9002", "参数无效"),

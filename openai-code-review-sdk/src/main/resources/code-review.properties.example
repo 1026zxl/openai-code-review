@@ -39,3 +39,24 @@ code.review.github.token.env=GITHUB_TOKEN
 # Git仓库路径（可选，默认：当前目录）
 # code.review.git.repository.path=/path/to/git/repo
 
+# ========== 微信公众号配置 ==========
+# 是否启用微信公众号推送（可选，默认：false）
+# 如果配置了以下所有参数，将自动启用
+code.review.wechat.enabled=false
+
+# 微信公众号 AppID（测试号）
+code.review.wechat.app.id=your_app_id
+
+# 微信公众号 AppSecret（测试号）
+code.review.wechat.app.secret=your_app_secret
+
+# 模板消息ID（需要在微信公众平台配置模板）
+code.review.wechat.template.id=your_template_id
+
+# 接收消息的用户 OpenID（测试号中关注后获取）
+code.review.wechat.open.id=your_open_id
+
+# 环境变量名（可选）
+code.review.wechat.app.id.env=WECHAT_APP_ID
+code.review.wechat.app.secret.env=WECHAT_APP_SECRET
+

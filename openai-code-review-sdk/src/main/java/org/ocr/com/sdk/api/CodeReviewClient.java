@@ -8,6 +8,7 @@ import org.ocr.com.sdk.exception.CodeReviewException;
 import org.ocr.com.sdk.exception.ErrorCode;
 import org.ocr.com.sdk.infrastructure.git.GitRepository;
 import org.ocr.com.sdk.infrastructure.http.HttpClient;
+import org.ocr.com.sdk.infrastructure.notification.WeChatNotifier;
 import org.ocr.com.sdk.infrastructure.storage.ReportStorage;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -29,6 +30,7 @@ public class CodeReviewClient {
     private final GitRepository gitRepository;
     private final HttpClient httpClient;
     private final ReportStorage reportStorage;
+    private final WeChatNotifier weChatNotifier;
     
     /**
      * 构造函数方式创建客户端
@@ -48,6 +50,7 @@ public class CodeReviewClient {
         this.gitRepository = new GitRepository(config.getGitRepositoryPath());
         this.httpClient = new HttpClient(config);
         this.reportStorage = new ReportStorage(config);
+        this.weChatNotifier = new WeChatNotifier(config);
     }
     
     /**
@@ -113,6 +116,12 @@ public class CodeReviewClient {
             
             ReviewResult result = new ReviewResult(codeInfo, reviewContent, LocalDateTime.now(), reportPath);
             
+            // 4. 异步推送微信公众号（如果配置了）
+            if (config.isWechatEnabled()) {
+                logger.info("Step 4: 推送微信公众号通知...");
+                weChatNotifier.sendAsync(result);
+            }
+            
             logger.info("=== 代码评审完成 ===");
             return result;
             
@@ -171,6 +180,31 @@ public class CodeReviewClient {
         
         public Builder gitRepositoryPath(String gitRepositoryPath) {
             configBuilder.gitRepositoryPath(gitRepositoryPath);
+            return this;
+        }
+        
+        public Builder wechatAppId(String wechatAppId) {
+            configBuilder.wechatAppId(wechatAppId);
+            return this;
+        }
+        
+        public Builder wechatAppSecret(String wechatAppSecret) {
+            configBuilder.wechatAppSecret(wechatAppSecret);
+            return this;
+        }
+        
+        public Builder wechatTemplateId(String wechatTemplateId) {
+            configBuilder.wechatTemplateId(wechatTemplateId);
+            return this;
+        }
+        
+        public Builder wechatOpenId(String wechatOpenId) {
+            configBuilder.wechatOpenId(wechatOpenId);
+            return this;
+        }
+        
+        public Builder wechatEnabled(boolean wechatEnabled) {
+            configBuilder.wechatEnabled(wechatEnabled);
             return this;
         }
         
