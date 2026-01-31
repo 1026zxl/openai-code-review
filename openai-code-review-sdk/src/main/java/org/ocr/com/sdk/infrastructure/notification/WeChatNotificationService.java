@@ -10,9 +10,9 @@ import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClients;
 import org.apache.http.util.EntityUtils;
 import org.ocr.com.sdk.config.CodeReviewConfig;
-import org.ocr.com.sdk.domain.model.ReviewResult;
+import org.ocr.com.sdk.domain.model.NotificationMessage;
+import org.ocr.com.sdk.domain.service.NotificationService;
 import org.ocr.com.sdk.exception.ApiException;
-import org.ocr.com.sdk.exception.CodeReviewException;
 import org.ocr.com.sdk.exception.ErrorCode;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -23,26 +23,23 @@ import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 /**
- * 微信公众号通知器
- * 负责向微信公众号发送代码评审结果
+ * 微信公众号通知服务实现
+ * 实现 NotificationService 接口，负责向微信公众号发送通知消息
  * 
  * @author SDK Team
  * @since 1.0
  */
-public class WeChatNotifier {
+public class WeChatNotificationService implements NotificationService {
     
-    private static final Logger logger = LoggerFactory.getLogger(WeChatNotifier.class);
+    private static final Logger logger = LoggerFactory.getLogger(WeChatNotificationService.class);
     
     // 微信公众号API地址
     private static final String WECHAT_TOKEN_URL = "https://api.weixin.qq.com/cgi-bin/token";
     private static final String WECHAT_SEND_TEMPLATE_URL = "https://api.weixin.qq.com/cgi-bin/message/template/send";
     
     // access_token 缓存（有效期7200秒，提前5分钟刷新）
-    private static final long TOKEN_EXPIRE_TIME = 7200 * 1000L; // 7200秒
     private static final long TOKEN_REFRESH_BUFFER = 5 * 60 * 1000L; // 5分钟缓冲
     
     private final CodeReviewConfig config;
@@ -53,44 +50,20 @@ public class WeChatNotifier {
     private volatile String cachedAccessToken;
     private volatile long tokenExpireTime;
     
-    public WeChatNotifier(CodeReviewConfig config) {
+    public WeChatNotificationService(CodeReviewConfig config) {
         this.config = config;
         this.objectMapper = new ObjectMapper();
         // 使用单线程池执行异步推送任务
         this.executorService = Executors.newSingleThreadExecutor(r -> {
-            Thread t = new Thread(r, "WeChatNotifier-Thread");
+            Thread t = new Thread(r, "WeChatNotificationService-Thread");
             t.setDaemon(true);
             return t;
         });
     }
     
-    /**
-     * 异步发送代码评审结果到微信公众号
-     * 
-     * @param reviewResult 评审结果
-     */
-    public void sendAsync(ReviewResult reviewResult) {
-        if (!config.isWechatEnabled()) {
-            logger.debug("微信公众号推送未启用，跳过");
-            return;
-        }
-        
-        CompletableFuture.runAsync(() -> {
-            try {
-                send(reviewResult);
-            } catch (Exception e) {
-                logger.error("异步发送微信公众号消息失败", e);
-            }
-        }, executorService);
-    }
-    
-    /**
-     * 同步发送代码评审结果到微信公众号
-     * 
-     * @param reviewResult 评审结果
-     */
-    public void send(ReviewResult reviewResult) {
-        if (!config.isWechatEnabled()) {
+    @Override
+    public void send(NotificationMessage message) throws NotificationException {
+        if (!isEnabled()) {
             logger.debug("微信公众号推送未启用，跳过");
             return;
         }
@@ -100,17 +73,42 @@ public class WeChatNotifier {
             String accessToken = getAccessToken();
             
             // 2. 构建模板消息
-            String templateMessage = buildTemplateMessage(reviewResult);
+            String templateMessage = buildTemplateMessage(message);
             
             // 3. 发送模板消息
             sendTemplateMessage(accessToken, templateMessage);
             
             logger.info("微信公众号消息发送成功");
             
+        } catch (ApiException e) {
+            logger.error("发送微信公众号消息失败", e);
+            throw new NotificationException(e.getErrorCode(), e.getMessage(), e);
         } catch (Exception e) {
             logger.error("发送微信公众号消息失败", e);
-            // 不抛出异常，避免影响主流程
+            throw new NotificationException(ErrorCode.WECHAT_SEND_MESSAGE_FAILED.getCode(),
+                    "发送微信公众号消息失败: " + e.getMessage(), e);
         }
+    }
+    
+    @Override
+    public void sendAsync(NotificationMessage message) {
+        if (!isEnabled()) {
+            logger.debug("微信公众号推送未启用，跳过");
+            return;
+        }
+        
+        CompletableFuture.runAsync(() -> {
+            try {
+                send(message);
+            } catch (NotificationException e) {
+                logger.error("异步发送微信公众号消息失败: [{}] {}", e.getErrorCode(), e.getMessage(), e);
+            }
+        }, executorService);
+    }
+    
+    @Override
+    public boolean isEnabled() {
+        return config.isWechatEnabled();
     }
     
     /**
@@ -175,56 +173,52 @@ public class WeChatNotifier {
     /**
      * 构建模板消息
      */
-    private String buildTemplateMessage(ReviewResult reviewResult) throws IOException {
-        Map<String, Object> message = new HashMap<>();
-        message.put("touser", config.getWechatOpenId());
-        message.put("template_id", config.getWechatTemplateId());
+    private String buildTemplateMessage(NotificationMessage message) throws IOException {
+        Map<String, Object> template = new HashMap<>();
+        template.put("touser", config.getWechatOpenId());
+        template.put("template_id", config.getWechatTemplateId());
         
         // 构建报告链接（如果有）
-        if (reviewResult.getReportPath() != null && !reviewResult.getReportPath().isEmpty()) {
-            // 如果报告路径是GitHub路径，构建GitHub链接
-            String reportUrl = buildReportUrl(reviewResult.getReportPath());
-            if (reportUrl != null) {
-                message.put("url", reportUrl);
-            }
+        if (message.getLinkUrl() != null && !message.getLinkUrl().isEmpty()) {
+            template.put("url", message.getLinkUrl());
         }
         
         // 构建消息数据
         Map<String, Map<String, String>> data = new HashMap<>();
         
-        // 提取评审内容摘要
-        String summary = extractSummary(reviewResult.getReviewContent());
-        
         // first: 标题
-        data.put("first", createDataItem("代码评审完成通知", "#173177"));
+        data.put("first", createDataItem(message.getTitle(), "#173177"));
         
-        // keyword1: 提交信息
-        String commitMessage = reviewResult.getCodeInfo().getCommitMessage();
-        if (commitMessage.length() > 20) {
+        // keyword1: 提交信息（从元数据获取）
+        String commitMessage = message.getMetadata("commitMessage");
+        if (commitMessage != null && commitMessage.length() > 20) {
             commitMessage = commitMessage.substring(0, 20) + "...";
         }
-        data.put("keyword1", createDataItem(commitMessage, "#173177"));
+        data.put("keyword1", createDataItem(commitMessage != null ? commitMessage : "未知", "#173177"));
         
-        // keyword2: 提交人
-        data.put("keyword2", createDataItem(reviewResult.getCodeInfo().getAuthorName(), "#173177"));
+        // keyword2: 提交人（从元数据获取）
+        String authorName = message.getMetadata("authorName");
+        data.put("keyword2", createDataItem(authorName != null ? authorName : "未知", "#173177"));
         
         // keyword3: 评审时间
-        String reviewTime = reviewResult.getReviewTime().toString().replace("T", " ");
+        String reviewTime = message.getTimestamp().toString().replace("T", " ");
         data.put("keyword3", createDataItem(reviewTime, "#173177"));
         
-        // keyword4: 问题统计（从评审内容中提取）
-        String issueStats = extractIssueStats(reviewResult.getReviewContent());
-        data.put("keyword4", createDataItem(issueStats, "#FF0000"));
+        // keyword4: 问题统计（从元数据获取）
+        String issueStats = message.getMetadata("issueStats");
+        String issueStatsColor = message.getPriority() == NotificationMessage.Priority.HIGH ? "#FF0000" : "#173177";
+        data.put("keyword4", createDataItem(issueStats != null ? issueStats : "查看详情", issueStatsColor));
         
         // remark: 摘要
-        if (summary.length() > 100) {
+        String summary = message.getSummary();
+        if (summary != null && summary.length() > 100) {
             summary = summary.substring(0, 100) + "...";
         }
-        data.put("remark", createDataItem(summary, "#173177"));
+        data.put("remark", createDataItem(summary != null ? summary : "评审完成", "#173177"));
         
-        message.put("data", data);
+        template.put("data", data);
         
-        return objectMapper.writeValueAsString(message);
+        return objectMapper.writeValueAsString(template);
     }
     
     /**
@@ -235,84 +229,6 @@ public class WeChatNotifier {
         item.put("value", value);
         item.put("color", color);
         return item;
-    }
-    
-    /**
-     * 提取评审内容摘要
-     */
-    private String extractSummary(String reviewContent) {
-        if (reviewContent == null || reviewContent.isEmpty()) {
-            return "评审完成";
-        }
-        
-        // 提取第一段作为摘要
-        String[] lines = reviewContent.split("\n");
-        for (String line : lines) {
-            line = line.trim();
-            if (line.length() > 20 && !line.startsWith("#") && !line.startsWith("*")) {
-                return line;
-            }
-        }
-        
-        // 如果没有合适的行，返回前100个字符
-        return reviewContent.length() > 100 ? reviewContent.substring(0, 100) : reviewContent;
-    }
-    
-    /**
-     * 提取问题统计
-     */
-    private String extractIssueStats(String reviewContent) {
-        if (reviewContent == null || reviewContent.isEmpty()) {
-            return "无问题";
-        }
-        
-        // 尝试从评审内容中提取问题数量
-        // 格式：高（x） 中（y） 低（z）
-        int highCount = 0, mediumCount = 0, lowCount = 0;
-        
-        // 简单的正则匹配
-        String[] lines = reviewContent.split("\n");
-        for (String line : lines) {
-            if (line.contains("严重问题数量") || line.contains("问题数量")) {
-                // 尝试提取数字，格式：高（x） 中（y） 低（z）
-                // 使用正则表达式提取
-                Pattern pattern = Pattern.compile("高[（(]\\s*(\\d+)\\s*[）)]|中[（(]\\s*(\\d+)\\s*[）)]|低[（(]\\s*(\\d+)\\s*[）)]");
-                Matcher matcher = pattern.matcher(line);
-                while (matcher.find()) {
-                    if (matcher.group(1) != null) {
-                        highCount = Integer.parseInt(matcher.group(1));
-                    } else if (matcher.group(2) != null) {
-                        mediumCount = Integer.parseInt(matcher.group(2));
-                    } else if (matcher.group(3) != null) {
-                        lowCount = Integer.parseInt(matcher.group(3));
-                    }
-                }
-                break;
-            }
-        }
-        
-        if (highCount == 0 && mediumCount == 0 && lowCount == 0) {
-            return "查看详情";
-        }
-        
-        return String.format("高:%d 中:%d 低:%d", highCount, mediumCount, lowCount);
-    }
-    
-    /**
-     * 构建报告URL
-     */
-    private String buildReportUrl(String reportPath) {
-        // 如果报告路径是GitHub路径，构建GitHub链接
-        if (config.getGithubRepoUrl() != null && !config.getGithubRepoUrl().isEmpty()) {
-            // 从 git URL 提取仓库信息
-            // 例如: https://github.com/user/repo.git -> https://github.com/user/repo/blob/main/path
-            String repoUrl = config.getGithubRepoUrl();
-            if (repoUrl.endsWith(".git")) {
-                repoUrl = repoUrl.substring(0, repoUrl.length() - 4);
-            }
-            return repoUrl + "/blob/main/" + reportPath;
-        }
-        return null;
     }
     
     /**
