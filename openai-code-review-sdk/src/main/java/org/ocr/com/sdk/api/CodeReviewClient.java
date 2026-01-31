@@ -17,7 +17,10 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.TimeUnit;
 
 /**
  * 代码评审客户端
@@ -131,11 +134,42 @@ public class CodeReviewClient {
                 logger.info("Step 4: 发送通知消息...");
                 System.out.println("发送通知消息... ...");
                 NotificationMessage message = messageFactory.createFromReviewResult(result);
+                
+                // 收集所有异步任务
+                List<CompletableFuture<Void>> futures = new ArrayList<>();
+                
                 for (NotificationService service : notificationServices) {
                     System.out.println("进入for循环准备发送消息... ...");
                     if (service.isEnabled()) {
                         System.out.println("进入if循环准备发送消息... ...");
-                        service.sendAsync(message);
+                        // 创建异步任务并收集
+                        CompletableFuture<Void> future = CompletableFuture.runAsync(() -> {
+                            try {
+                                service.send(message); // 使用同步方法，在异步线程中执行
+                                System.out.println("通知消息发送成功");
+                            } catch (NotificationService.NotificationException e) {
+                                logger.error("发送通知消息失败: [{}] {}", e.getErrorCode(), e.getMessage(), e);
+                                System.out.println("发送通知消息失败: " + e.getMessage());
+                            }
+                        });
+                        futures.add(future);
+                    }
+                }
+                
+                // 等待所有异步任务完成（最多等待5秒）
+                if (!futures.isEmpty()) {
+                    try {
+                        System.out.println("等待通知消息发送完成（最多5秒）...");
+                        CompletableFuture.allOf(futures.toArray(new CompletableFuture[0]))
+                                .get(5, TimeUnit.SECONDS);
+                        logger.info("所有通知消息发送完成");
+                        System.out.println("所有通知消息发送完成");
+                    } catch (java.util.concurrent.TimeoutException e) {
+                        logger.warn("等待通知消息发送超时（5秒），继续执行");
+                        System.out.println("等待通知消息发送超时（5秒），继续执行");
+                    } catch (Exception e) {
+                        logger.warn("等待通知消息发送时发生异常: {}", e.getMessage());
+                        System.out.println("等待通知消息发送时发生异常: " + e.getMessage());
                     }
                 }
             }
