@@ -176,7 +176,8 @@ public class NotificationMessage {
         metadata.put("commitHash", codeInfo.getCommitHash() != null ? codeInfo.getCommitHash() : "");
         metadata.put("issueStats", issueStats);
         metadata.put("reportPath", reviewResult.getReportPath() != null ? reviewResult.getReportPath() : "");
-        
+        System.out.println("metadata: " + metadata);
+
         // 确定优先级
         Priority priority = determinePriority(issueStats);
         

@@ -172,6 +172,7 @@ public class WeChatNotificationService implements NotificationService {
     
     /**
      * 构建模板消息
+     * 参考参考项目的实现方式，使用模板键枚举
      */
     private String buildTemplateMessage(NotificationMessage message) throws IOException {
         Map<String, Object> template = new HashMap<>();
@@ -194,38 +195,25 @@ public class WeChatNotificationService implements NotificationService {
             template.put("url", linkUrl);
         }
         
-        // 构建消息数据
+        // 构建消息数据（参考参考项目的实现方式）
         Map<String, Map<String, String>> data = new HashMap<>();
         
-        // first: 标题
-        data.put("first", createDataItem(message.getTitle(), "#173177"));
+        // 统一从环境变量获取信息（GitHub Actions 工作流脚本中已设置）
+        String repoName = getEnvOrDefault("REPO_NAME", extractRepoName(config.getGithubRepoUrl()));
+        String branchName = getEnvOrDefault("BRANCH_NAME", getEnvOrDefault("GITHUB_REF", "未知"));
+        String commitAuthor = getEnvOrDefault("COMMIT_AUTHOR", message.getMetadata("authorName"));
+        String commitMessage = getEnvOrDefault("COMMIT_MESSAGE", message.getMetadata("commitMessage"));
         
-        // keyword1: 提交信息（从元数据获取）
-        String commitMessage = message.getMetadata("commitMessage");
-        if (commitMessage != null && commitMessage.length() > 20) {
-            commitMessage = commitMessage.substring(0, 20) + "...";
+        // 处理 GITHUB_REF 格式（refs/heads/branch-name）
+        if (branchName.startsWith("refs/heads/")) {
+            branchName = branchName.substring(11);
         }
-        data.put("keyword1", createDataItem(commitMessage != null ? commitMessage : "未知", "#173177"));
         
-        // keyword2: 提交人（从元数据获取）
-        String authorName = message.getMetadata("authorName");
-        data.put("keyword2", createDataItem(authorName != null ? authorName : "未知", "#173177"));
-        
-        // keyword3: 评审时间
-        String reviewTime = message.getTimestamp().toString().replace("T", " ");
-        data.put("keyword3", createDataItem(reviewTime, "#173177"));
-        
-        // keyword4: 问题统计（从元数据获取）
-        String issueStats = message.getMetadata("issueStats");
-        String issueStatsColor = message.getPriority() == NotificationMessage.Priority.HIGH ? "#FF0000" : "#173177";
-        data.put("keyword4", createDataItem(issueStats != null ? issueStats : "查看详情", issueStatsColor));
-        
-        // remark: 摘要
-        String summary = message.getSummary();
-        if (summary != null && summary.length() > 100) {
-            summary = summary.substring(0, 100) + "...";
-        }
-        data.put("remark", createDataItem(summary != null ? summary : "评审完成", "#173177"));
+        // 使用模板键构建数据（参考参考项目的 TemplateKey 枚举）
+        putTemplateData(data, TemplateKey.REPO_NAME, repoName);
+        putTemplateData(data, TemplateKey.BRANCH_NAME, branchName);
+        putTemplateData(data, TemplateKey.COMMIT_AUTHOR, commitAuthor);
+        putTemplateData(data, TemplateKey.COMMIT_MESSAGE, commitMessage);
         
         template.put("data", data);
         
@@ -233,14 +221,72 @@ public class WeChatNotificationService implements NotificationService {
     }
     
     /**
-     * 创建模板消息数据项
+     * 模板键枚举（参考参考项目的实现）
      */
-    private Map<String, String> createDataItem(String value, String color) {
+    private enum TemplateKey {
+        REPO_NAME("repo_name"),
+        BRANCH_NAME("branch_name"),
+        COMMIT_AUTHOR("commit_author"),
+        COMMIT_MESSAGE("commit_message");
+        
+        private final String code;
+        
+        TemplateKey(String code) {
+            this.code = code;
+        }
+        
+        public String getCode() {
+            return code;
+        }
+    }
+    
+    /**
+     * 添加模板数据（参考参考项目的 TemplateMessageDTO.put 方法）
+     */
+    private void putTemplateData(Map<String, Map<String, String>> data, TemplateKey key, String value) {
+        if (value == null) {
+            value = "未知";
+        }
         Map<String, String> item = new HashMap<>();
         item.put("value", value);
-        item.put("color", color);
-        return item;
+        item.put("color", "#173177");
+        data.put(key.getCode(), item);
     }
+    
+    /**
+     * 从环境变量获取值，如果不存在则使用默认值
+     */
+    private String getEnvOrDefault(String envKey, String defaultValue) {
+        String value = System.getenv(envKey);
+        if (value != null && !value.trim().isEmpty()) {
+            return value.trim();
+        }
+        return defaultValue != null ? defaultValue : "未知";
+    }
+    
+    /**
+     * 从 GitHub 仓库 URL 提取仓库名称（备用方案）
+     */
+    private String extractRepoName(String githubRepoUrl) {
+        if (githubRepoUrl == null || githubRepoUrl.isEmpty()) {
+            return "未知";
+        }
+        
+        // 移除 .git 后缀
+        String repoUrl = githubRepoUrl;
+        if (repoUrl.endsWith(".git")) {
+            repoUrl = repoUrl.substring(0, repoUrl.length() - 4);
+        }
+        
+        // 提取仓库名（最后一个 / 之后的部分）
+        int lastSlash = repoUrl.lastIndexOf('/');
+        if (lastSlash >= 0 && lastSlash < repoUrl.length() - 1) {
+            return repoUrl.substring(lastSlash + 1);
+        }
+        
+        return "未知";
+    }
+    
     
     /**
      * 发送模板消息
