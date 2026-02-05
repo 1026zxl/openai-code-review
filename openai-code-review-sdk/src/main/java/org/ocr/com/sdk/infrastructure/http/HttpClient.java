@@ -8,7 +8,6 @@ import org.apache.http.client.config.RequestConfig;
 import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.client.protocol.HttpClientContext;
-import org.apache.http.conn.ConnectTimeoutException;
 import org.apache.http.entity.StringEntity;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClientBuilder;
@@ -44,7 +43,7 @@ public class HttpClient implements CodeReviewApi {
 
     // 默认配置
     private static final int DEFAULT_CONNECT_TIMEOUT = 10000; // 10秒连接超时
-    private static final int DEFAULT_SOCKET_TIMEOUT = 30000;  // 30秒读取超时
+    private static final int DEFAULT_SOCKET_TIMEOUT = 180000;  // 180秒（3分钟）读取超时，支持长提示词
     private static final int DEFAULT_CONNECTION_REQUEST_TIMEOUT = 10000; // 10秒请求超时
     private static final int DEFAULT_MAX_RETRIES = 3; // 默认最大重试3次
 
@@ -78,8 +77,14 @@ public class HttpClient implements CodeReviewApi {
                     return false;
                 }
 
-                // 如果是中断异常，不重试
-                if (exception instanceof InterruptedIOException) {
+                // SocketTimeoutException（读取超时）应该允许重试，因为这是网络超时，不是用户中断
+                if (exception instanceof SocketTimeoutException) {
+                    logger.warn("读取超时，第 {} 次重试: {}", executionCount, exception.getMessage());
+                    return true;
+                }
+
+                // 如果是其他中断异常（非超时），不重试
+                if (exception instanceof InterruptedIOException && !(exception instanceof SocketTimeoutException)) {
                     logger.warn("请求被中断，不重试");
                     return false;
                 }
@@ -95,7 +100,6 @@ public class HttpClient implements CodeReviewApi {
                     logger.warn("SSL握手异常，第 {} 次重试: {}", executionCount, exception.getMessage());
                     return true;
                 }
-
 
                 // 如果是连接重置，重试
                 if (exception instanceof SocketException) {
