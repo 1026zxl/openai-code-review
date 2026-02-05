@@ -23,14 +23,21 @@ jobs:
           java-version: 11
           distribution: 'adopt'
 
-      - name: Build with Maven
-        run: mvn clean install
+#      - name: Build with Maven
+#        run: mvn clean install
+      - name: Create libs directory
+        run: mkdir -p ./libs
+
+      - name: Download openai-code-review-sdk JAR
+        run: wget -o ./libs/openai-code-review-sdk-1.0-SNAPSHOT.jar https://github.com/1026zxl/openai-code-review/releases/tag/open-ai-code-review.jar
 
       - name: Run openai-code-review
-        run: java -jar openai-code-review-sdk/target/openai-code-review-sdk-1.0-SNAPSHOT.jar
+        run: java -jar ./libs/openai-code-review-sdk-1.0-SNAPSHOT.jar
         env:
+          # OPENAI 配置
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           CODE_TOKEN: ${{ secrets.CODE_TOKEN }}
+          # 微信公众号配置
           WECHAT_APP_ID: ${{ secrets.WECHAT_APP_ID }}
           WECHAT_APP_SECRET: ${{ secrets.WECHAT_APP_SECRET }}
           WECHAT_TEMPLATE_ID: ${{ secrets.WECHAT_TEMPLATE_ID }}
