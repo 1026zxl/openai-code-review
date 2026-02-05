@@ -157,6 +157,14 @@ public class HttpClient implements CodeReviewApi {
 
         while (retryCount <= maxRetries) {
             try {
+                if (retryCount == 0) {
+                    System.out.println("    正在调用AI接口: " + config.getApiUrl());
+                    System.out.println("    使用模型: " + config.getModel());
+                } else {
+                    System.out.println("    第 " + retryCount + " 次重试调用AI接口...");
+                    logger.info("第 {} 次重试请求: POST {}", retryCount, config.getApiUrl());
+                }
+                
                 HttpPost httpPost = new HttpPost(config.getApiUrl());
                 httpPost.setHeader("Authorization", "Bearer " + config.getApiKey());
                 httpPost.setHeader("Content-Type", "application/json");
@@ -166,9 +174,7 @@ public class HttpClient implements CodeReviewApi {
                 String requestBodyJson = objectMapper.writeValueAsString(requestBody);
                 httpPost.setEntity(new StringEntity(requestBodyJson, "UTF-8"));
 
-                if (retryCount > 0) {
-                    logger.info("第 {} 次重试请求: POST {}", retryCount, config.getApiUrl());
-                } else {
+                if (retryCount == 0) {
                     logger.debug("HTTP Request: POST {}", config.getApiUrl());
                 }
 
@@ -188,7 +194,10 @@ public class HttpClient implements CodeReviewApi {
                     String result = parseResponse(responseBody);
 
                     if (retryCount > 0) {
+                        System.out.println("    ✓ 重试成功，在第 " + retryCount + " 次重试后获得响应");
                         logger.info("重试成功，在第 {} 次重试后获得响应", retryCount);
+                    } else {
+                        System.out.println("    ✓ AI接口调用成功");
                     }
 
                     return result;
@@ -200,6 +209,7 @@ public class HttpClient implements CodeReviewApi {
                 retryCount++;
 
                 if (retryCount > maxRetries) {
+                    System.err.println("    ✗ 达到最大重试次数 " + maxRetries + "，请求失败");
                     logger.error("达到最大重试次数 {}，请求失败", maxRetries);
                     throw new ApiException(ErrorCode.HTTP_REQUEST_FAILED, 0,
                             "请求失败，已重试 " + maxRetries + " 次: " + e.getMessage(), e);
@@ -207,6 +217,7 @@ public class HttpClient implements CodeReviewApi {
 
                 // 计算指数退避延迟：1s, 2s, 4s...
                 long delay = baseDelay * (1L << (retryCount - 1));
+                System.out.println("    ⚠ 请求失败，将在 " + delay + "ms 后进行第 " + retryCount + " 次重试: " + e.getMessage());
                 logger.warn("请求失败，{}ms 后进行第 {} 次重试: {}", delay, retryCount, e.getMessage());
 
                 try {

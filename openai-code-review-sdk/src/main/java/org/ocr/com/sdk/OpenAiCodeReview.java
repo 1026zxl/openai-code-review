@@ -35,23 +35,38 @@ public class OpenAiCodeReview {
      * @param args 命令行参数（当前未使用，保留用于未来扩展）
      */
     public static void main(String[] args) {
-        // 测试日志输出
-        System.out.println("=== 开始执行代码评审 ===");
-        System.out.println("日志系统检查: " + (logger != null ? "正常" : "异常"));
+        System.out.println("========================================");
+        System.out.println("OpenAI Code Review SDK");
+        System.out.println("========================================");
+        System.out.println("开始初始化代码评审客户端...");
         
         try {
             // 使用 CodeReviewClient 执行评审
             CodeReviewClient client = CodeReviewClient.create();
+            System.out.println("✓ 代码评审客户端初始化成功");
+            System.out.println();
+            
             ReviewResult result = client.review();
+            
+            System.out.println();
+            System.out.println("========================================");
+            System.out.println("代码评审执行成功！");
+            System.out.println("========================================");
+            
         } catch (CodeReviewException e) {
+            System.err.println("========================================");
             System.err.println("代码评审失败: [" + e.getErrorCode() + "] " + e.getMessage());
+            System.err.println("========================================");
             if (e.getCause() != null) {
                 e.getCause().printStackTrace();
             }
+            logger.error("代码评审失败", e);
             System.exit(1);
         } catch (Exception e) {
+            System.err.println("========================================");
+            System.err.println("代码评审过程发生未知异常: " + e.getMessage());
+            System.err.println("========================================");
             logger.error("代码评审过程发生未知异常", e);
-            System.err.println("代码评审失败: " + e.getMessage());
             e.printStackTrace();
             System.exit(1);
         }

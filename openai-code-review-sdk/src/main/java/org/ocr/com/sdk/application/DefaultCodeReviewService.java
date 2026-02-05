@@ -114,18 +114,24 @@ public class DefaultCodeReviewService extends AbstractCodeReviewService {
 
     @Override
     protected CodeInfo getCodeChanges() {
-        return codeChangeSource.getLatestDiff();
+        System.out.println("  正在从Git仓库获取最新代码变更...");
+        CodeInfo codeInfo = codeChangeSource.getLatestDiff();
+        return codeInfo;
     }
 
     @Override
     protected String reviewCode(CodeInfo codeInfo) {
         // 生成提示词
+        System.out.println("  正在生成AI评审提示词...");
         String prompt = generatePrompt(codeInfo.getDiffContent());
+        System.out.println("  提示词生成完成，长度: " + prompt.length() + " 字符");
         logger.debug("生成提示词，长度: {}", prompt.length());
         
         // 调用AI进行评审
+        System.out.println("  正在调用AI接口进行评审（可能需要一些时间）...");
         String reviewContent = codeReviewApi.reviewByPrompt(prompt);
         if (reviewContent == null || reviewContent.trim().isEmpty()) {
+            System.err.println("  ✗ AI返回的评审内容为空");
             throw new CodeReviewException(ErrorCode.AI_API_RESPONSE_EMPTY.getCode(),
                     ErrorCode.AI_API_RESPONSE_EMPTY.getMessage());
         }
@@ -135,42 +141,63 @@ public class DefaultCodeReviewService extends AbstractCodeReviewService {
 
     @Override
     protected String saveReport(CodeInfo codeInfo, String reviewContent) {
-        return reviewReportRepository.save(codeInfo, reviewContent);
+        System.out.println("  正在保存评审报告到GitHub仓库...");
+        String reportPath = reviewReportRepository.save(codeInfo, reviewContent);
+        return reportPath;
     }
 
     @Override
     protected void sendNotification(ReviewResult result) {
         if (notificationServices.isEmpty()) {
+            System.out.println("  未配置通知服务，跳过通知");
             logger.debug("未配置通知服务，跳过通知");
             return;
         }
         
+        System.out.println("  正在构建通知消息...");
         logger.info("发送通知消息...");
         NotificationMessage message = NotificationMessage.fromReviewResult(result);
+        
+        System.out.println("  配置的通知服务数量: " + notificationServices.size());
 
         List<CompletableFuture<Void>> futures = new ArrayList<>();
+        int enabledCount = 0;
         for (NotificationService service : notificationServices) {
             if (service.isEnabled()) {
+                enabledCount++;
+                String serviceName = service.getClass().getSimpleName();
+                System.out.println("  正在发送通知到: " + serviceName);
                 CompletableFuture<Void> future = CompletableFuture.runAsync(() -> {
                     try {
                         service.send(message);
-                        logger.debug("通知消息发送成功: {}", service.getClass().getSimpleName());
+                        System.out.println("  ✓ " + serviceName + " 通知发送成功");
+                        logger.debug("通知消息发送成功: {}", serviceName);
                     } catch (NotificationService.NotificationException e) {
+                        System.err.println("  ✗ " + serviceName + " 通知发送失败: [" + e.getErrorCode() + "] " + e.getMessage());
                         logger.error("发送通知消息失败: [{}] {}", e.getErrorCode(), e.getMessage(), e);
                     }
                 });
                 futures.add(future);
             }
         }
+        
+        if (enabledCount == 0) {
+            System.out.println("  没有启用的通知服务");
+            return;
+        }
 
         if (!futures.isEmpty()) {
             try {
+                System.out.println("  等待通知发送完成（最多等待 " + NOTIFICATION_TIMEOUT_SECONDS + " 秒）...");
                 CompletableFuture.allOf(futures.toArray(new CompletableFuture[0]))
                         .get(NOTIFICATION_TIMEOUT_SECONDS, TimeUnit.SECONDS);
+                System.out.println("  ✓ 所有通知消息发送完成");
                 logger.info("所有通知消息发送完成");
             } catch (java.util.concurrent.TimeoutException e) {
+                System.out.println("  ⚠ 等待通知消息发送超时（" + NOTIFICATION_TIMEOUT_SECONDS + "秒），继续执行");
                 logger.warn("等待通知消息发送超时（{}秒），继续执行", NOTIFICATION_TIMEOUT_SECONDS);
             } catch (Exception e) {
+                System.out.println("  ⚠ 等待通知消息发送时发生异常: " + e.getMessage());
                 logger.warn("等待通知消息发送时发生异常: {}", e.getMessage());
             }
         }

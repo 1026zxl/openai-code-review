@@ -64,26 +64,35 @@ public class WeChatNotificationService implements NotificationService {
     @Override
     public void send(NotificationMessage message) throws NotificationException {
         if (!isEnabled()) {
+            System.out.println("    微信公众号推送未启用，跳过");
             logger.debug("微信公众号推送未启用，跳过");
             return;
         }
         
         try {
             // 1. 获取 access_token
+            System.out.println("    正在获取微信公众号 access_token...");
             String accessToken = getAccessToken();
+            System.out.println("    ✓ access_token 获取成功");
             
             // 2. 构建模板消息
+            System.out.println("    正在构建微信公众号模板消息...");
             String templateMessage = buildTemplateMessage(message);
+            System.out.println("    ✓ 模板消息构建完成");
             
             // 3. 发送模板消息
+            System.out.println("    正在发送微信公众号模板消息...");
             sendTemplateMessage(accessToken, templateMessage);
+            System.out.println("    ✓ 微信公众号消息发送成功");
             
             logger.info("微信公众号消息发送成功");
             
         } catch (ApiException e) {
+            System.err.println("    ✗ 发送微信公众号消息失败: [" + e.getErrorCode() + "] " + e.getMessage());
             logger.error("发送微信公众号消息失败", e);
             throw new NotificationException(e.getErrorCode(), e.getMessage(), e);
         } catch (Exception e) {
+            System.err.println("    ✗ 发送微信公众号消息失败: " + e.getMessage());
             logger.error("发送微信公众号消息失败", e);
             throw new NotificationException(ErrorCode.WECHAT_SEND_MESSAGE_FAILED.getCode(),
                     "发送微信公众号消息失败: " + e.getMessage(), e);

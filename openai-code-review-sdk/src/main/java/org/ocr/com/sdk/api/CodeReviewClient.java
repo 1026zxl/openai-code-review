@@ -44,10 +44,16 @@ public class CodeReviewClient {
      * 基础设施层直接接受 CodeReviewConfig，简化配置管理。
      */
     private static DefaultCodeReviewService createCodeReviewService(CodeReviewConfig config) {
+        System.out.println("  正在初始化基础设施组件...");
+        System.out.println("  - Git仓库适配器");
         CodeChangeSource codeChangeSource = new GitRepository(config);
+        System.out.println("  - AI接口适配器");
         CodeReviewApi codeReviewApi = new HttpClient(config);
+        System.out.println("  - 报告存储适配器");
         ReviewReportRepository reviewReportRepository = new ReportStorage(config);
+        System.out.println("  - 通知服务适配器");
         List<NotificationService> notificationServices = NotificationServiceFactory.createServices(config);
+        System.out.println("  ✓ 基础设施组件初始化完成");
 
         return new DefaultCodeReviewService(
                 codeChangeSource,
@@ -76,6 +82,7 @@ public class CodeReviewClient {
      * @return 评审结果
      */
     public ReviewResult review() {
+        System.out.println("CodeReviewClient: 初始化完成，开始执行代码评审");
         logger.info("CodeReviewClient: 委托代码评审服务执行评审");
         return codeReviewService.execute();
     }

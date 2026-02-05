@@ -26,34 +26,59 @@ public abstract class AbstractCodeReviewService {
      */
     public ReviewResult execute() {
         try {
+            System.out.println("========================================");
+            System.out.println("=== 开始代码评审 ===");
+            System.out.println("========================================");
             logger.info("=== 开始代码评审 ===");
             
             // 1. 获取代码变更
+            System.out.println("[步骤 1/5] 正在获取代码变更...");
             CodeInfo codeInfo = getCodeChanges();
             codeInfo.validate();
+            System.out.println("✓ 代码变更获取成功");
+            System.out.println("  - 提交信息: " + codeInfo.getCommitMessage());
+            System.out.println("  - 提交作者: " + codeInfo.getAuthorName());
+            System.out.println("  - 变更统计: " + codeInfo.getChangeSummary());
             
             // 2. 评审代码
+            System.out.println("[步骤 2/5] 正在调用AI进行代码评审...");
             String reviewContent = reviewCode(codeInfo);
+            System.out.println("✓ AI评审完成");
+            System.out.println("  - 评审内容长度: " + reviewContent.length() + " 字符");
             
             // 3. 保存报告
+            System.out.println("[步骤 3/5] 正在保存评审报告...");
             String reportPath = saveReport(codeInfo, reviewContent);
+            System.out.println("✓ 评审报告保存成功");
+            System.out.println("  - 报告路径: " + (reportPath != null ? reportPath : "未保存"));
             
             // 4. 构建评审结果
+            System.out.println("[步骤 4/5] 正在构建评审结果...");
             ReviewResult result = new ReviewResult(
                 codeInfo,
                 reviewContent,
                 LocalDateTime.now(),
                 reportPath
             );
+            System.out.println("✓ 评审结果构建完成");
             
             // 5. 发送通知
+            System.out.println("[步骤 5/5] 正在发送通知...");
             sendNotification(result);
+            System.out.println("✓ 通知发送完成");
             
+            System.out.println("========================================");
+            System.out.println("=== 代码评审完成 ===");
+            System.out.println("========================================");
             logger.info("=== 代码评审完成 ===");
             logger.info("评审报告路径: {}", reportPath != null ? reportPath : "未保存");
             
             return result;
         } catch (Exception e) {
+            System.err.println("========================================");
+            System.err.println("=== 代码评审失败 ===");
+            System.err.println("========================================");
+            System.err.println("错误信息: " + e.getMessage());
             logger.error("代码评审失败", e);
             throw e;
         }

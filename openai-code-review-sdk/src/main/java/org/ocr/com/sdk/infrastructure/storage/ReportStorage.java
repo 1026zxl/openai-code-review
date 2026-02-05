@@ -57,21 +57,27 @@ public class ReportStorage implements ReviewReportRepository {
     public String saveReport(CodeInfo codeInfo, String reviewContent) {
         String githubToken = config.getGithubToken();
         if (githubToken == null || githubToken.isEmpty()) {
+            System.err.println("    ✗ GitHub Token 未配置");
             throw new CodeReviewException(ErrorCode.CONFIG_API_KEY_MISSING.getCode(),
                     "GitHub Token 未配置，请设置环境变量 " + config.getGithubTokenEnv() + " 或配置文件中的 code.review.github.token");
         }
         
         String githubRepoUrl = config.getGithubRepoUrl();
         if (githubRepoUrl == null || githubRepoUrl.isEmpty()) {
+            System.err.println("    ✗ GitHub 仓库 URL 未配置");
             throw new CodeReviewException(ErrorCode.CONFIG_API_URL_INVALID.getCode(),
                     "GitHub 仓库 URL 未配置");
         }
         
+        System.out.println("    目标仓库: " + githubRepoUrl);
+        
         Path tempRepoPath = null;
         try {
             // 1. 克隆或拉取 GitHub 仓库
+            System.out.println("    正在克隆/拉取GitHub仓库...");
             tempRepoPath = Paths.get(TEMP_REPO_DIR).toAbsolutePath();
             Git git = cloneOrPullRepository(githubRepoUrl, githubToken, tempRepoPath);
+            System.out.println("    ✓ GitHub仓库克隆/拉取成功");
             
             // 2. 生成文件路径和内容
             String authorName = sanitizeFileName(codeInfo.getAuthorName());
@@ -81,18 +87,26 @@ public class ReportStorage implements ReviewReportRepository {
             String fileName = commitDesc + " - " + authorName + ".md";
             Path filePath = tempRepoPath.resolve(relativePath).resolve(fileName);
             
+            System.out.println("    报告文件路径: " + relativePath + "/" + fileName);
+            
             // 3. 创建目录并写入 Markdown 格式的报告
+            System.out.println("    正在写入评审报告...");
             Files.createDirectories(filePath.getParent());
             writeMarkdownReport(filePath, codeInfo, reviewContent);
+            System.out.println("    ✓ 评审报告写入成功");
             
             // 4. 提交并推送到 GitHub
+            System.out.println("    正在提交并推送到GitHub...");
             commitAndPush(git, filePath, relativePath + "/" + fileName, codeInfo);
+            System.out.println("    ✓ 评审报告已推送到GitHub");
             
             // 5. 清理临时仓库
             cleanupTempRepository(tempRepoPath);
             
             String githubFilePath = relativePath + "/" + fileName;
-            logger.info("评审报告已上传到 GitHub: {}", githubRepoUrl + "/blob/main/" + githubFilePath);
+            String fullUrl = githubRepoUrl + "/blob/main/" + githubFilePath;
+            System.out.println("    报告URL: " + fullUrl);
+            logger.info("评审报告已上传到 GitHub: {}", fullUrl);
             return githubFilePath;
             
         } catch (IOException | GitAPIException e) {

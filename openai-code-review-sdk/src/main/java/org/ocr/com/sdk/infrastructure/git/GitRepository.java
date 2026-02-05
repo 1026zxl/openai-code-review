@@ -50,10 +50,13 @@ public class GitRepository implements CodeChangeSource {
     @Override
     public CodeInfo getLatestDiff() {
         try {
+            System.out.println("    正在打开Git仓库...");
             Repository repository = openRepository();
+            System.out.println("    ✓ Git仓库打开成功");
             
             try (Git git = new Git(repository)) {
                 // 获取最近两次提交
+                System.out.println("    正在获取最近两次提交...");
                 Iterable<RevCommit> commits = git.log().setMaxCount(2).call();
                 List<RevCommit> commitList = new ArrayList<>();
                 for (RevCommit commit : commits) {
@@ -61,6 +64,7 @@ public class GitRepository implements CodeChangeSource {
                 }
                 
                 if (commitList.size() < 2) {
+                    System.err.println("    ✗ Git提交历史不足，需要至少2次提交");
                     throw new GitException(ErrorCode.GIT_COMMIT_HISTORY_INSUFFICIENT);
                 }
                 
@@ -74,16 +78,20 @@ public class GitRepository implements CodeChangeSource {
                 String commitHash = newCommit.getName();
                 
                 // 获取代码差异
+                System.out.println("    正在计算代码差异...");
                 String diffContent = getDiffContent(git, repository, oldCommit, newCommit);
+                int diffLineCount = diffContent.split("\n").length;
                 
+                System.out.println("    ✓ 代码差异获取成功");
                 logger.info("提交信息: {}", commitMessage);
                 logger.info("提交人: {}", authorName);
                 logger.info("提交时间: {}", commitTime);
-                logger.info("代码差异行数: {}", diffContent.split("\n").length);
+                logger.info("代码差异行数: {}", diffLineCount);
                 
                 return new CodeInfo(commitMessage, authorName, commitTime, commitHash, diffContent);
             }
         } catch (GitAPIException | IOException e) {
+            System.err.println("    ✗ Git操作失败: " + e.getMessage());
             throw new GitException(ErrorCode.GIT_OPERATION_FAILED, e);
         }
     }
