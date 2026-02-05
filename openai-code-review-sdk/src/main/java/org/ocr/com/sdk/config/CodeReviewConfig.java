@@ -20,7 +20,7 @@ public class CodeReviewConfig {
     private static final Logger logger = LoggerFactory.getLogger(CodeReviewConfig.class);
     
     // 默认配置
-    private static final String DEFAULT_API_URL = "https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions";
+    private static final String DEFAULT_API_URL = "https://dashscope.aliyuncs.com/compatible-mode/v1";
     private static final String DEFAULT_MODEL = "qwen-flash";
     private static final String DEFAULT_API_KEY_ENV = "OPENAI_API_KEY";
     private static final double DEFAULT_TEMPERATURE = 0.7;
