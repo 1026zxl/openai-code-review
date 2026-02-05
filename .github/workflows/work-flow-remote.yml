@@ -29,7 +29,7 @@ jobs:
         run: mkdir -p ./libs
 
       - name: Download openai-code-review-sdk JAR
-        run: wget -O ./libs/openai-code-review-sdk-1.0-SNAPSHOT.jar https://github.com/1026zxl/openai-code-review/releases/tag/open-ai-code-review.jar
+        run: wget -O ./libs/openai-code-review-sdk-1.0-SNAPSHOT.jar https://github.com/1026zxl/openai-code-review/releases/download/open-ai-code-review.jar/openai-code-review-sdk-1.0-SNAPSHOT.jar
 
       - name: Run openai-code-review
         run: java -jar ./libs/openai-code-review-sdk-1.0-SNAPSHOT.jar
