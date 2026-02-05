@@ -1,14 +1,32 @@
-package org.ocr.com.sdk.domain.service;
+package org.ocr.com.sdk.application;
+
+import org.ocr.com.sdk.domain.model.CodeInfo;
+import org.ocr.com.sdk.domain.model.NotificationMessage;
+import org.ocr.com.sdk.domain.model.ReviewResult;
+import org.ocr.com.sdk.domain.port.CodeChangeSource;
+import org.ocr.com.sdk.domain.port.CodeReviewApi;
+import org.ocr.com.sdk.domain.port.ReviewReportRepository;
+import org.ocr.com.sdk.domain.service.NotificationService;
+import org.ocr.com.sdk.exception.CodeReviewException;
+import org.ocr.com.sdk.exception.ErrorCode;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.TimeUnit;
 
 /**
- * 代码评审提示词模板
+ * 默认代码评审服务实现
+ * 实现具体的代码评审步骤
  * 
  * @author SDK Team
  * @since 1.0
  */
-public class CodeReviewPromptTemplate {
+public class DefaultCodeReviewService extends AbstractCodeReviewService {
+
+    private static final int NOTIFICATION_TIMEOUT_SECONDS = 5;
     
-    private static final String TEMPLATE = 
+    private static final String PROMPT_TEMPLATE = 
         "角色设定：\n" +
         "请你担任一名经验丰富的资深技术专家，负责对提供的代码进行严格、细致、富有建设性的评审。你的目标是发现潜在问题、提升代码质量、确保最佳实践，并提供具体、可操作的改进建议。\n" +
         "\n" +
@@ -77,19 +95,94 @@ public class CodeReviewPromptTemplate {
         "1.  **必须优先修复：** （列出所有\"高\"等级问题）\n" +
         "2.  **建议近期优化：** （列出所有\"中\"等级问题）\n" +
         "3.  **可考虑重构：** （列出所有\"低\"等级问题或代码异味）";
-    
+
+    private final CodeChangeSource codeChangeSource;
+    private final CodeReviewApi codeReviewApi;
+    private final ReviewReportRepository reviewReportRepository;
+    private final List<NotificationService> notificationServices;
+
+    public DefaultCodeReviewService(
+            CodeChangeSource codeChangeSource,
+            CodeReviewApi codeReviewApi,
+            ReviewReportRepository reviewReportRepository,
+            List<NotificationService> notificationServices) {
+        this.codeChangeSource = codeChangeSource;
+        this.codeReviewApi = codeReviewApi;
+        this.reviewReportRepository = reviewReportRepository;
+        this.notificationServices = notificationServices != null ? notificationServices : new ArrayList<>();
+    }
+
+    @Override
+    protected CodeInfo getCodeChanges() {
+        return codeChangeSource.getLatestDiff();
+    }
+
+    @Override
+    protected String reviewCode(CodeInfo codeInfo) {
+        // 生成提示词
+        String prompt = generatePrompt(codeInfo.getDiffContent());
+        logger.debug("生成提示词，长度: {}", prompt.length());
+        
+        // 调用AI进行评审
+        String reviewContent = codeReviewApi.reviewByPrompt(prompt);
+        if (reviewContent == null || reviewContent.trim().isEmpty()) {
+            throw new CodeReviewException(ErrorCode.AI_API_RESPONSE_EMPTY.getCode(),
+                    ErrorCode.AI_API_RESPONSE_EMPTY.getMessage());
+        }
+        
+        return reviewContent;
+    }
+
+    @Override
+    protected String saveReport(CodeInfo codeInfo, String reviewContent) {
+        return reviewReportRepository.save(codeInfo, reviewContent);
+    }
+
+    @Override
+    protected void sendNotification(ReviewResult result) {
+        if (notificationServices.isEmpty()) {
+            logger.debug("未配置通知服务，跳过通知");
+            return;
+        }
+        
+        logger.info("发送通知消息...");
+        NotificationMessage message = NotificationMessage.fromReviewResult(result);
+
+        List<CompletableFuture<Void>> futures = new ArrayList<>();
+        for (NotificationService service : notificationServices) {
+            if (service.isEnabled()) {
+                CompletableFuture<Void> future = CompletableFuture.runAsync(() -> {
+                    try {
+                        service.send(message);
+                        logger.debug("通知消息发送成功: {}", service.getClass().getSimpleName());
+                    } catch (NotificationService.NotificationException e) {
+                        logger.error("发送通知消息失败: [{}] {}", e.getErrorCode(), e.getMessage(), e);
+                    }
+                });
+                futures.add(future);
+            }
+        }
+
+        if (!futures.isEmpty()) {
+            try {
+                CompletableFuture.allOf(futures.toArray(new CompletableFuture[0]))
+                        .get(NOTIFICATION_TIMEOUT_SECONDS, TimeUnit.SECONDS);
+                logger.info("所有通知消息发送完成");
+            } catch (java.util.concurrent.TimeoutException e) {
+                logger.warn("等待通知消息发送超时（{}秒），继续执行", NOTIFICATION_TIMEOUT_SECONDS);
+            } catch (Exception e) {
+                logger.warn("等待通知消息发送时发生异常: {}", e.getMessage());
+            }
+        }
+    }
+
     /**
      * 生成提示词
-     * 
-     * @param codeContent 代码内容
-     * @return 完整的提示词
      */
-    public static String generatePrompt(String codeContent) {
-        if (codeContent == null || codeContent.isEmpty()) {
-            throw new IllegalArgumentException("代码内容不能为空");
+    private String generatePrompt(String diffContent) {
+        if (diffContent == null || diffContent.trim().isEmpty()) {
+            throw new IllegalArgumentException("代码差异内容不能为空");
         }
-        // 使用 replace 而不是 format，避免代码中包含 % 字符导致格式化错误
-        return TEMPLATE.replace("%s", codeContent);
+        return PROMPT_TEMPLATE.replace("%s", diffContent);
     }
 }
-

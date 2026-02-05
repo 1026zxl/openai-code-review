@@ -1,0 +1,15 @@
+# .cursor/rules/java-ddd-architecture.cursorrules
+version: 2
+name: "Java DDD 架构优化参考规则"
+
+description: |
+  参考 D:\xfg\openai-code-review-sdk 项目的优雅分层设计以及代码实现上的设计，
+  改进当前Java SDK项目的DDD架构分层，并优化代码设计
+
+# 项目类型标识
+project_type: "java-sdk-ddd"
+
+# 重点关注的外部项目路径
+context:
+  external_directories:
+    - "D:/xfg/openai-code-review-sdk"

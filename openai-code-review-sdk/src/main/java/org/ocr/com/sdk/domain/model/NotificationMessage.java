@@ -162,26 +162,27 @@ public class NotificationMessage {
     public static NotificationMessage fromReviewResult(ReviewResult reviewResult) {
         CodeInfo codeInfo = reviewResult.getCodeInfo();
         
-        // 提取摘要
-        String summary = extractSummary(reviewResult.getReviewContent());
+        // 提取摘要（使用值对象方法）
+        String reviewContentStr = reviewResult.getReviewContent();
+        String summary = extractSummary(reviewContentStr);
         
         // 提取问题统计
-        String issueStats = extractIssueStats(reviewResult.getReviewContent());
+        String issueStats = extractIssueStats(reviewContentStr);
         
-        // 构建元数据
+        // 构建元数据（使用兼容getter）
         Map<String, String> metadata = new HashMap<>();
         metadata.put("commitMessage", codeInfo.getCommitMessage());
         metadata.put("authorName", codeInfo.getAuthorName());
-        metadata.put("commitHash", codeInfo.getCommitHash());
+        metadata.put("commitHash", codeInfo.getCommitHash() != null ? codeInfo.getCommitHash() : "");
         metadata.put("issueStats", issueStats);
-        metadata.put("reportPath", reviewResult.getReportPath());
+        metadata.put("reportPath", reviewResult.getReportPath() != null ? reviewResult.getReportPath() : "");
         
         // 确定优先级
         Priority priority = determinePriority(issueStats);
         
         return builder()
                 .title("代码评审完成通知")
-                .content(reviewResult.getReviewContent())
+                .content(reviewContentStr)
                 .summary(summary)
                 .linkUrl(buildReportUrl(reviewResult.getReportPath()))
                 .linkText("查看详细报告")

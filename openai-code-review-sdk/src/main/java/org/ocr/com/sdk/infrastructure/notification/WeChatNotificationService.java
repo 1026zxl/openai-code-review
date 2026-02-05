@@ -178,9 +178,20 @@ public class WeChatNotificationService implements NotificationService {
         template.put("touser", config.getWechatOpenId());
         template.put("template_id", config.getWechatTemplateId());
         
-        // 构建报告链接（如果有）
-        if (message.getLinkUrl() != null && !message.getLinkUrl().isEmpty()) {
-            template.put("url", message.getLinkUrl());
+        // 构建报告链接：优先使用消息中的 linkUrl，否则根据配置拼接报告地址
+        String linkUrl = message.getLinkUrl();
+        if ((linkUrl == null || linkUrl.isEmpty()) && config.getGithubRepoUrl() != null) {
+            String reportPath = message.getMetadata("reportPath");
+            if (reportPath != null && !reportPath.isEmpty()) {
+                String repoUrl = config.getGithubRepoUrl();
+                if (repoUrl.endsWith(".git")) {
+                    repoUrl = repoUrl.substring(0, repoUrl.length() - 4);
+                }
+                linkUrl = repoUrl + "/blob/main/" + reportPath;
+            }
+        }
+        if (linkUrl != null && !linkUrl.isEmpty()) {
+            template.put("url", linkUrl);
         }
         
         // 构建消息数据

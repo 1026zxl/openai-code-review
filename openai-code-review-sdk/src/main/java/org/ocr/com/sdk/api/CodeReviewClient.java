@@ -1,15 +1,12 @@
 package org.ocr.com.sdk.api;
 
-import org.ocr.com.sdk.application.CodeReviewApplicationService;
-import org.ocr.com.sdk.application.DefaultReviewResultNotificationBuilder;
-import org.ocr.com.sdk.application.ReviewResultNotificationBuilder;
+import org.ocr.com.sdk.application.DefaultCodeReviewService;
 import org.ocr.com.sdk.config.CodeReviewConfig;
 import org.ocr.com.sdk.domain.model.ReviewResult;
 import org.ocr.com.sdk.domain.port.CodeChangeSource;
 import org.ocr.com.sdk.domain.port.CodeReviewApi;
 import org.ocr.com.sdk.domain.port.ReviewReportRepository;
 import org.ocr.com.sdk.domain.service.NotificationService;
-import org.ocr.com.sdk.exception.CodeReviewException;
 import org.ocr.com.sdk.infrastructure.git.GitRepository;
 import org.ocr.com.sdk.infrastructure.http.HttpClient;
 import org.ocr.com.sdk.infrastructure.notification.NotificationServiceFactory;
@@ -31,7 +28,7 @@ public class CodeReviewClient {
     private static final Logger logger = LoggerFactory.getLogger(CodeReviewClient.class);
 
     private final CodeReviewConfig config;
-    private final CodeReviewApplicationService applicationService;
+    private final DefaultCodeReviewService codeReviewService;
 
     public CodeReviewClient() {
         this(CodeReviewConfig.fromEnvironment());
@@ -39,25 +36,24 @@ public class CodeReviewClient {
 
     public CodeReviewClient(CodeReviewConfig config) {
         this.config = config;
-        this.applicationService = createApplicationService(config);
+        this.codeReviewService = createCodeReviewService(config);
     }
 
     /**
-     * 组装根：根据配置创建端口实现并组装应用服务
+     * 组装根：创建端口实现并组装代码评审服务（DDD 分层）。
+     * 基础设施层直接接受 CodeReviewConfig，简化配置管理。
      */
-    private static CodeReviewApplicationService createApplicationService(CodeReviewConfig config) {
-        CodeChangeSource codeChangeSource = new GitRepository(config.getGitRepositoryPath());
+    private static DefaultCodeReviewService createCodeReviewService(CodeReviewConfig config) {
+        CodeChangeSource codeChangeSource = new GitRepository(config);
         CodeReviewApi codeReviewApi = new HttpClient(config);
         ReviewReportRepository reviewReportRepository = new ReportStorage(config);
         List<NotificationService> notificationServices = NotificationServiceFactory.createServices(config);
-        ReviewResultNotificationBuilder notificationBuilder = new DefaultReviewResultNotificationBuilder(config);
 
-        return new CodeReviewApplicationService(
+        return new DefaultCodeReviewService(
                 codeChangeSource,
                 codeReviewApi,
                 reviewReportRepository,
-                notificationServices,
-                notificationBuilder
+                notificationServices
         );
     }
 
@@ -73,89 +69,19 @@ public class CodeReviewClient {
         return new CodeReviewClient(CodeReviewConfig.fromProperties(propertiesFile));
     }
 
-    public static Builder builder() {
-        return new Builder();
-    }
 
     /**
-     * 执行代码评审（委托给应用服务）
+     * 执行代码评审（委托给代码评审服务）
      *
      * @return 评审结果
      */
     public ReviewResult review() {
-        logger.info("CodeReviewClient: 委托应用服务执行评审");
-        return applicationService.execute();
+        logger.info("CodeReviewClient: 委托代码评审服务执行评审");
+        return codeReviewService.execute();
     }
 
     public CodeReviewConfig getConfig() {
         return config;
     }
 
-    public static class Builder {
-        private final CodeReviewConfig.Builder configBuilder = CodeReviewConfig.builder();
-
-        public Builder apiKey(String apiKey) {
-            configBuilder.apiKey(apiKey);
-            return this;
-        }
-
-        public Builder apiUrl(String apiUrl) {
-            configBuilder.apiUrl(apiUrl);
-            return this;
-        }
-
-        public Builder model(String model) {
-            configBuilder.model(model);
-            return this;
-        }
-
-        public Builder temperature(double temperature) {
-            configBuilder.temperature(temperature);
-            return this;
-        }
-
-        public Builder maxTokens(int maxTokens) {
-            configBuilder.maxTokens(maxTokens);
-            return this;
-        }
-
-        public Builder reportBaseDir(String reportBaseDir) {
-            configBuilder.reportBaseDir(reportBaseDir);
-            return this;
-        }
-
-        public Builder gitRepositoryPath(String gitRepositoryPath) {
-            configBuilder.gitRepositoryPath(gitRepositoryPath);
-            return this;
-        }
-
-        public Builder wechatAppId(String wechatAppId) {
-            configBuilder.wechatAppId(wechatAppId);
-            return this;
-        }
-
-        public Builder wechatAppSecret(String wechatAppSecret) {
-            configBuilder.wechatAppSecret(wechatAppSecret);
-            return this;
-        }
-
-        public Builder wechatTemplateId(String wechatTemplateId) {
-            configBuilder.wechatTemplateId(wechatTemplateId);
-            return this;
-        }
-
-        public Builder wechatOpenId(String wechatOpenId) {
-            configBuilder.wechatOpenId(wechatOpenId);
-            return this;
-        }
-
-        public Builder wechatEnabled(boolean wechatEnabled) {
-            configBuilder.wechatEnabled(wechatEnabled);
-            return this;
-        }
-
-        public CodeReviewClient build() {
-            return new CodeReviewClient(configBuilder.build());
-        }
-    }
 }

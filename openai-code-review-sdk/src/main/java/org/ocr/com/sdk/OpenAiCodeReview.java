@@ -40,18 +40,10 @@ public class OpenAiCodeReview {
         System.out.println("日志系统检查: " + (logger != null ? "正常" : "异常"));
         
         try {
-            logger.info("=== OpenAI代码自动评审开始 ===");
-            logger.debug("调试信息：日志系统已初始化");
-            
             // 使用 CodeReviewClient 执行评审
             CodeReviewClient client = CodeReviewClient.create();
             ReviewResult result = client.review();
-            
-            logger.info("=== OpenAI代码自动评审完成 ===");
-            logger.info("评审报告路径: {}", result.getReportPath());
-            
         } catch (CodeReviewException e) {
-            logger.error("代码评审失败: [{}] {}", e.getErrorCode(), e.getMessage(), e);
             System.err.println("代码评审失败: [" + e.getErrorCode() + "] " + e.getMessage());
             if (e.getCause() != null) {
                 e.getCause().printStackTrace();

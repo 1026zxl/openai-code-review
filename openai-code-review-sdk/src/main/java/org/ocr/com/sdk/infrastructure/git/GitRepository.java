@@ -9,6 +9,7 @@ import org.eclipse.jgit.lib.Repository;
 import org.eclipse.jgit.revwalk.RevCommit;
 import org.eclipse.jgit.storage.file.FileRepositoryBuilder;
 import org.eclipse.jgit.treewalk.CanonicalTreeParser;
+import org.ocr.com.sdk.config.CodeReviewConfig;
 import org.ocr.com.sdk.domain.model.CodeInfo;
 import org.ocr.com.sdk.domain.port.CodeChangeSource;
 import org.ocr.com.sdk.exception.ErrorCode;
@@ -35,11 +36,15 @@ public class GitRepository implements CodeChangeSource {
     private final String repositoryPath;
     
     public GitRepository() {
-        this(null);
+        this((String) null);
     }
     
     public GitRepository(String repositoryPath) {
         this.repositoryPath = repositoryPath;
+    }
+    
+    public GitRepository(CodeReviewConfig config) {
+        this.repositoryPath = config != null ? config.getGitRepositoryPath() : null;
     }
     
     @Override
