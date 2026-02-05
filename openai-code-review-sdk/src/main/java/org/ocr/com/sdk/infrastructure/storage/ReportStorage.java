@@ -6,6 +6,7 @@ import org.eclipse.jgit.lib.PersonIdent;
 import org.eclipse.jgit.transport.UsernamePasswordCredentialsProvider;
 import org.ocr.com.sdk.config.CodeReviewConfig;
 import org.ocr.com.sdk.domain.model.CodeInfo;
+import org.ocr.com.sdk.domain.port.ReviewReportRepository;
 import org.ocr.com.sdk.exception.CodeReviewException;
 import org.ocr.com.sdk.exception.ErrorCode;
 import org.slf4j.Logger;
@@ -21,13 +22,13 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 
 /**
- * 评审报告存储基础设施
+ * 评审报告存储基础设施（实现 ReviewReportRepository 端口）
  * 支持将评审报告上传到 GitHub 仓库
- * 
+ *
  * @author SDK Team
  * @since 1.0
  */
-public class ReportStorage {
+public class ReportStorage implements ReviewReportRepository {
     
     private static final Logger logger = LoggerFactory.getLogger(ReportStorage.class);
     
@@ -41,9 +42,14 @@ public class ReportStorage {
         this.config = config;
     }
     
+    @Override
+    public String save(CodeInfo codeInfo, String reviewContent) {
+        return saveReport(codeInfo, reviewContent);
+    }
+
     /**
      * 保存评审报告到 GitHub 仓库
-     * 
+     *
      * @param codeInfo 代码信息
      * @param reviewContent 评审内容
      * @return GitHub 仓库中的文件路径

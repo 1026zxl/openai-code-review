@@ -271,13 +271,10 @@ public class NotificationMessage {
     }
     
     /**
-     * 构建报告URL
-     * 注意：此方法在领域层无法访问配置，返回null
-     * 实际URL构建应在 NotificationMessageFactory 中完成
+     * 构建报告 URL（领域层不依赖配置，返回 null）
+     * 报告链接由应用层 {@link org.ocr.com.sdk.application.ReviewResultNotificationBuilder} 实现注入。
      */
     private static String buildReportUrl(String reportPath) {
-        // 领域层无法访问配置，返回null
-        // 实际URL构建在 NotificationMessageFactory 中完成
         return null;
     }
     

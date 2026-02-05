@@ -1,13 +1,10 @@
 package org.ocr.com.sdk.infrastructure.notification;
 
-import org.ocr.com.sdk.OpenAiCodeReview;
 import org.ocr.com.sdk.config.CodeReviewConfig;
 import org.ocr.com.sdk.domain.service.NotificationService;
-import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.logging.Logger;
 
 /**
  * 通知服务工厂

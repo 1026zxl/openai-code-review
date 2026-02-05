@@ -15,6 +15,7 @@ import org.apache.http.impl.client.HttpClientBuilder;
 import org.apache.http.protocol.HttpContext;
 import org.apache.http.util.EntityUtils;
 import org.ocr.com.sdk.config.CodeReviewConfig;
+import org.ocr.com.sdk.domain.port.CodeReviewApi;
 import org.ocr.com.sdk.exception.ApiException;
 import org.ocr.com.sdk.exception.ErrorCode;
 import org.slf4j.Logger;
@@ -32,12 +33,12 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * HTTP客户端基础设施
- * 
+ * HTTP 客户端基础设施（实现 CodeReviewApi 端口，调用 AI 评审接口）
+ *
  * @author SDK Team
  * @since 1.0
  */
-public class HttpClient {
+public class HttpClient implements CodeReviewApi {
     
     private static final Logger logger = LoggerFactory.getLogger(HttpClient.class);
     
@@ -128,15 +129,19 @@ public class HttpClient {
                 .build();
     }
     
+    @Override
+    public String reviewByPrompt(String prompt) {
+        return callAiApiWithRetry(prompt, DEFAULT_MAX_RETRIES);
+    }
+
     /**
-     * 调用AI API进行代码评审
-     * 带重试机制和指数退避
-     * 
+     * 调用 AI API 进行代码评审（带重试机制和指数退避）
+     *
      * @param prompt 提示词
      * @return 评审结果内容
      */
     public String callAiApi(String prompt) {
-        return callAiApiWithRetry(prompt, DEFAULT_MAX_RETRIES);
+        return reviewByPrompt(prompt);
     }
     
     /**

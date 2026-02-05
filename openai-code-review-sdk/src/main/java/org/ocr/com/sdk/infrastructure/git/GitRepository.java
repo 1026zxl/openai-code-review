@@ -10,6 +10,7 @@ import org.eclipse.jgit.revwalk.RevCommit;
 import org.eclipse.jgit.storage.file.FileRepositoryBuilder;
 import org.eclipse.jgit.treewalk.CanonicalTreeParser;
 import org.ocr.com.sdk.domain.model.CodeInfo;
+import org.ocr.com.sdk.domain.port.CodeChangeSource;
 import org.ocr.com.sdk.exception.ErrorCode;
 import org.ocr.com.sdk.exception.GitException;
 import org.slf4j.Logger;
@@ -22,12 +23,12 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Git仓库操作基础设施
- * 
+ * Git 仓库操作基础设施（实现 CodeChangeSource 端口）
+ *
  * @author SDK Team
  * @since 1.0
  */
-public class GitRepository {
+public class GitRepository implements CodeChangeSource {
     
     private static final Logger logger = LoggerFactory.getLogger(GitRepository.class);
     
@@ -41,9 +42,7 @@ public class GitRepository {
         this.repositoryPath = repositoryPath;
     }
     
-    /**
-     * 获取最近一次提交的代码差异
-     */
+    @Override
     public CodeInfo getLatestDiff() {
         try {
             Repository repository = openRepository();
